@@ -1,0 +1,8 @@
+# Request
+float64 latitude
+float64 longitude
+float64 altitude
+string frame_id
+---
+# Response
+geometry_msgs/PoseStamped pose

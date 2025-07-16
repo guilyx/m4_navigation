@@ -1,0 +1,10 @@
+# goal
+bool to_fly_mode  # true for fly mode, false for drive mode
+---
+# result
+bool success
+string message
+---
+# feedback
+float32 time_elapsed
+float32 time_remaining

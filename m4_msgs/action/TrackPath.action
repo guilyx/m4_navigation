@@ -1,0 +1,13 @@
+# Goal
+geometry_msgs/PoseStamped[] path  # Path to follow
+bool is_gps                       # If true, path contains GPS coordinates
+---
+# Result
+bool success
+string message
+---
+# Feedback
+float64 current_velocity
+float64 current_angular_velocity
+string current_state
+float64 distance_remaining
