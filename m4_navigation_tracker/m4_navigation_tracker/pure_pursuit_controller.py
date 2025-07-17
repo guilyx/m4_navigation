@@ -232,106 +232,39 @@ class PurePursuitController(Node):
             self.get_logger().error(f"Failed to transform pose: {str(e)}")
             return None
 
-    def find_lookahead_point(self) -> PoseStamped | None:
-        """Find the lookahead point in robot frame
+    def find_lookahead_point(self, pose: Pose) -> Pose:
+        """Calculate the lookahead point from a pose in robot frame
+
+        Args:
+            pose (Pose): The pose in robot frame to calculate lookahead from
 
         Returns:
-            PoseStamped | None: The lookahead point as a PoseStamped message, or None if no point is found
+            Pose: The lookahead point, either the original pose or projected onto horizon circle
         """
-        if not self.path or self.current_goal_idx >= len(self.path):
-            return None
+        # Calculate distance to target
+        distance = math.sqrt(pose.position.x**2 + pose.position.y**2)
 
-        # Transform current and next goals to robot frame until we find one beyond lookahead distance
-        transformed_poses: list[tuple[Pose, int]] = []  # List of (pose, index) tuples
-        idx = self.current_goal_idx
-        found_beyond_lookahead = False
+        # If we're within lookahead distance, return the pose as is
+        if distance <= self.lookahead_distance:
+            return pose
 
-        while idx < len(self.path) and not found_beyond_lookahead:
-            transformed_pose = self.transform_pose_to_robot_frame(self.path[idx])
-            if not transformed_pose:
-                return None
-
-            distance = math.sqrt(
-                transformed_pose.position.x**2 + transformed_pose.position.y**2
-            )
-
-            # Log the transformed goal
-            self.get_logger().info(
-                f"Goal {idx} (in {self.robot_frame} frame): "
-                f"x={transformed_pose.position.x:.2f}, y={transformed_pose.position.y:.2f}, "
-                f"distance={distance:.2f}"
-            )
-
-            transformed_poses.append((transformed_pose, idx))
-
-            # If this pose is beyond lookahead distance, we can stop gathering poses
-            if distance > self.lookahead_distance:
-                found_beyond_lookahead = True
-            idx += 1
-
-        if not transformed_poses:
-            return None
-
-        # Check if we've reached the current goal
-        current_pose, current_idx = transformed_poses[0]
-        current_distance = math.sqrt(
-            current_pose.position.x**2 + current_pose.position.y**2
+        # Project onto horizon circle
+        projected_x, projected_y = self.project_point_on_horizon(
+            pose.position.x, pose.position.y
         )
 
-        if current_distance < self.xy_goal_tolerance:
-            # If this was the last goal, trigger rotation
-            if current_idx == len(self.path) - 1:
-                self.get_logger().info(
-                    "Reached final waypoint, transitioning to rotation"
-                )
-                self.current_goal_idx = len(self.path)
-                return None
+        # Create projected pose
+        projected_pose = Pose()
+        projected_pose.position.x = projected_x
+        projected_pose.position.y = projected_y
+        projected_pose.position.z = pose.position.z
 
-            # Move to next goal
-            self.current_goal_idx = current_idx + 1
-            # If we have the next goal transformed, use it
-            if len(transformed_poses) > 1:
-                current_pose = transformed_poses[1][0]
-                current_distance = math.sqrt(
-                    current_pose.position.x**2 + current_pose.position.y**2
-                )
-            else:
-                # We need to get the next pose
-                return self.find_lookahead_point()
+        # Calculate orientation towards the actual target
+        angle = math.atan2(pose.position.y, pose.position.x)
+        projected_pose.orientation.z = math.sin(angle / 2.0)
+        projected_pose.orientation.w = math.cos(angle / 2.0)
 
-        # If we're beyond lookahead distance, project onto the horizon circle
-        if current_distance > self.lookahead_distance:
-            projected_x, projected_y = self.project_point_on_horizon(
-                current_pose.position.x, current_pose.position.y
-            )
-
-            # Log the projected point
-            self.get_logger().info(
-                f"Projected point (in {self.robot_frame} frame): "
-                f"x={projected_x:.2f}, y={projected_y:.2f}, "
-                f"distance={self.lookahead_distance:.2f}"
-            )
-
-            # Create a new PoseStamped for the projected point
-            result = PoseStamped()
-            result.header.frame_id = self.robot_frame
-            result.header.stamp = self.get_clock().now().to_msg()
-            result.pose.position.x = projected_x
-            result.pose.position.y = projected_y
-            result.pose.position.z = current_pose.position.z
-
-            # Calculate orientation towards the actual target
-            angle = math.atan2(current_pose.position.y, current_pose.position.x)
-            result.pose.orientation.z = math.sin(angle / 2.0)
-            result.pose.orientation.w = math.cos(angle / 2.0)
-        else:
-            # Use the pose as is
-            result = PoseStamped()
-            result.header.frame_id = self.robot_frame
-            result.header.stamp = self.get_clock().now().to_msg()
-            result.pose = current_pose
-
-        return result
+        return projected_pose
 
     def rotate_to_goal(self, goal_pose: PoseStamped) -> bool:
         """Rotate to face the goal orientation
@@ -487,22 +420,57 @@ class PurePursuitController(Node):
                 self.publish_path_markers()
                 self.publish_lookahead_circle()
 
-                lookahead_point: PoseStamped | None = self.find_lookahead_point()
-
-                if not lookahead_point:
-                    if self.current_goal_idx >= len(self.path):
-                        self.state = ControllerState.ROTATING
-                    else:
-                        self.stop_tracking()
-                        goal_handle.abort()
-                        return TrackPath.Result(
-                            success=False, message="Failed to find lookahead point"
-                        )
+                # Get current goal and transform to robot frame
+                if self.current_goal_idx >= len(self.path):
+                    self.state = ControllerState.ROTATING
                     continue
+
+                current_goal = self.path[self.current_goal_idx]
+                transformed_pose = self.transform_pose_to_robot_frame(current_goal)
+                if not transformed_pose:
+                    self.stop_tracking()
+                    goal_handle.abort()
+                    return TrackPath.Result(
+                        success=False, message="Failed to transform current goal"
+                    )
+
+                # Log the transformed goal
+                distance = math.sqrt(
+                    transformed_pose.position.x**2 + transformed_pose.position.y**2
+                )
+                self.get_logger().info(
+                    f"Current goal {self.current_goal_idx} (in {self.robot_frame} frame): "
+                    f"x={transformed_pose.position.x:.2f}, y={transformed_pose.position.y:.2f}, "
+                    f"distance={distance:.2f}"
+                )
+
+                # Check if we've reached the current goal
+                if distance < self.xy_goal_tolerance:
+                    if self.current_goal_idx == len(self.path) - 1:
+                        self.get_logger().info(
+                            "Reached final waypoint, transitioning to rotation"
+                        )
+                        self.state = ControllerState.ROTATING
+                        continue
+                    self.current_goal_idx += 1
+                    continue
+
+                # Find lookahead point
+                lookahead_pose = self.find_lookahead_point(transformed_pose)
+
+                # Log the lookahead point
+                lookahead_distance = math.sqrt(
+                    lookahead_pose.position.x**2 + lookahead_pose.position.y**2
+                )
+                self.get_logger().info(
+                    f"Lookahead point (in {self.robot_frame} frame): "
+                    f"x={lookahead_pose.position.x:.2f}, y={lookahead_pose.position.y:.2f}, "
+                    f"distance={lookahead_distance:.2f}"
+                )
 
                 # Calculate and publish control commands
                 cmd_vel: Twist = self.move(
-                    lookahead_point.pose.position.x, lookahead_point.pose.position.y
+                    lookahead_pose.position.x, lookahead_pose.position.y
                 )
                 self.cmd_vel_pub.publish(cmd_vel)
 
@@ -510,28 +478,7 @@ class PurePursuitController(Node):
                 feedback_msg.current_velocity = cmd_vel.linear.x
                 feedback_msg.current_angular_velocity = cmd_vel.angular.z
                 feedback_msg.current_state = self.state.value
-                if self.current_goal_idx < len(self.path):
-                    try:
-                        # Transform current goal to robot frame for distance calculation
-                        current_goal = self.path[self.current_goal_idx]
-                        transform = self.tf_buffer.lookup_transform(
-                            self.robot_frame,
-                            current_goal.header.frame_id,
-                            current_goal.header.stamp,
-                            rclpy.duration.Duration(seconds=1.0),
-                        )
-                        transformed_pose = tf2_geometry_msgs.do_transform_pose(
-                            current_goal.pose, transform
-                        )
-                        feedback_msg.distance_remaining = math.sqrt(
-                            transformed_pose.position.x**2
-                            + transformed_pose.position.y**2
-                        )
-                    except Exception as e:
-                        self.get_logger().warning(
-                            f"Failed to calculate distance: {str(e)}"
-                        )
-                        feedback_msg.distance_remaining = 0.0
+                feedback_msg.distance_remaining = distance
                 goal_handle.publish_feedback(feedback_msg)
 
             elif self.state == ControllerState.ROTATING:
@@ -542,15 +489,9 @@ class PurePursuitController(Node):
                 try:
                     # Transform final pose to robot frame
                     final_goal = self.path[-1]
-                    transform = self.tf_buffer.lookup_transform(
-                        self.robot_frame,
-                        final_goal.header.frame_id,
-                        final_goal.header.stamp,
-                        rclpy.duration.Duration(seconds=1.0),
-                    )
-                    final_pose = tf2_geometry_msgs.do_transform_pose(
-                        final_goal.pose, transform
-                    )
+                    final_pose = self.transform_pose_to_robot_frame(final_goal)
+                    if not final_pose:
+                        raise Exception("Failed to transform final pose")
 
                     # Extract target yaw from final pose quaternion
                     qx: float = final_pose.orientation.x
