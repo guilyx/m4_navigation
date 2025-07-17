@@ -13,6 +13,7 @@
   <depend>launch_ros</depend>
   <depend>m4_navigation_tracker</depend>
   <depend>m4_navigation_morph</depend>
+  <depend>arrc_launch_utils</depend>
   <depend>m4_msgs</depend>
 
   <export>

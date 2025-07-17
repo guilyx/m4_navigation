@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.5)
 project(m4_navigation_waypoints)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+set(CMAKE_CXX_STANDARD 20)
+
+# lots of warnings and all warnings
+if (MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra -pedantic)
 endif()
 
 # find dependencies
@@ -18,74 +23,59 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(m4_msgs REQUIRED)
 
-# Create waypoint manager library
-add_library(waypoint_manager SHARED
+set(exec_name ${PROJECT_NAME})
+set(library_name ${PROJECT_NAME}_lib)
+
+add_library(${library_name} SHARED
   src/waypoint_manager.cpp
 )
-target_include_directories(waypoint_manager PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
-ament_target_dependencies(waypoint_manager
-  rclcpp
-  arrc
-  arrc_interfaces
-  geometry_msgs
-  nav_msgs
-  tf2
-  tf2_ros
-  tf2_geometry_msgs
-  rclcpp_components
-  m4_msgs
+
+set(dependencies
+  "ament_cmake"
+  "rclcpp"
+  "arrc"
+  "arrc_interfaces"
+  "geometry_msgs"
+  "nav_msgs"
+  "tf2"
+  "tf2_ros"
+  "tf2_geometry_msgs"
+  "rclcpp_components"
+  "m4_msgs"
 )
 
-# Create waypoint manager node
-add_executable(waypoint_manager_node
-  src/waypoint_manager_node.cpp
-)
-target_link_libraries(waypoint_manager_node
-  waypoint_manager
-)
-ament_target_dependencies(waypoint_manager_node
-  rclcpp
+ament_target_dependencies(${library_name} PUBLIC
+  ${dependencies}
 )
 
-# Install
-install(
-  DIRECTORY include/
-  DESTINATION include
+target_link_libraries(${library_name} PUBLIC
+  arrc::arrc
 )
 
-install(
-  TARGETS waypoint_manager
-  EXPORT export_${PROJECT_NAME}
+target_include_directories(${library_name} PUBLIC include)
+
+add_executable(${exec_name} src/main.cpp)
+target_link_libraries(${exec_name} ${library_name})
+
+install(TARGETS ${library_name}
+  EXPORT export_${library_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
 
-install(
-  TARGETS waypoint_manager_node
-  DESTINATION lib/${PROJECT_NAME}
+install(TARGETS ${exec_name}
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
 
-# Export
-ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies(
-  rclcpp
-  arrc
-  arrc_interfaces
-  geometry_msgs
-  nav_msgs
-  tf2
-  tf2_ros
-  tf2_geometry_msgs
-  rclcpp_components
-)
+install(DIRECTORY DESTINATION share/${PROJECT_NAME})
 
 ament_package()
+
+#if(BUILD_TESTING)
+  #find_package(ament_cmake_gtest REQUIRED)
+  #find_package(ament_cmake_pytest REQUIRED)
+  #add_subdirectory(test)
+#endif()
+

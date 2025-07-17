@@ -28,8 +28,8 @@ namespace m4_bt_plugins
     }
 
     // Build action goal
-    goal_.poses.clear();
-    goal_.poses.push_back(goal_pose);
+    goal_.path.clear();
+    goal_.path.push_back(goal_pose);
 
     RCLCPP_INFO(
         logger_,
@@ -46,8 +46,8 @@ BT_REGISTER_NODES(factory)
 {
   auto builder = [](const std::string &name, const BT::NodeConfiguration &config)
   {
-    return std::make_unique<m4_bt_plugins::action::NavigateToAction>(name, "track_path", config);
+    return std::make_unique<m4_bt_plugins::NavigateToAction>(name, "track_path", config);
   };
 
-  factory.registerBuilder<m4_bt_plugins::action::NavigateToAction>("NavigateTo", builder);
+  factory.registerBuilder<m4_bt_plugins::NavigateToAction>("NavigateTo", builder);
 }

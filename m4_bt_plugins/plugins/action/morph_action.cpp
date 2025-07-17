@@ -59,8 +59,8 @@ BT_REGISTER_NODES(factory)
 {
   auto builder = [](const std::string &name, const BT::NodeConfiguration &config)
   {
-    return std::make_unique<m4_bt_plugins::action::MorphAction>(name, "morph", config);
+    return std::make_unique<m4_bt_plugins::MorphAction>(name, "morph", config);
   };
 
-  factory.registerBuilder<m4_bt_plugins::action::MorphAction>("Morph", builder);
+  factory.registerBuilder<m4_bt_plugins::MorphAction>("Morph", builder);
 }

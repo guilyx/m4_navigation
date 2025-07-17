@@ -22,7 +22,7 @@ namespace m4_navigation_waypoints
   public:
     using GpsOriginSrv = arrc_interfaces::srv::GpsOrigin;
     using GpsOriginClientPtr = rclcpp::Client<GpsOriginSrv>::SharedPtr;
-    using GpsToPoseSrv = m4_navigation_waypoints::srv::GpsToPose;
+    using GpsToPoseSrv = m4_msgs::srv::GpsToPose;
     using GpsToPoseServicePtr = rclcpp::Service<GpsToPoseSrv>::SharedPtr;
 
     /**

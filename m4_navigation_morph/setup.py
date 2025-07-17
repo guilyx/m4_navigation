@@ -21,7 +21,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "morph_controller = m4_navigation_morph.morph_controller:main",
+            "m4_navigation_morph = m4_navigation_morph.morph_controller:main",
         ],
     },
 )

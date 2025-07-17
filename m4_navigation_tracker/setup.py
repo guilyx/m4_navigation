@@ -21,7 +21,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "pure_pursuit_controller = m4_navigation_tracker.pure_pursuit_controller:main",
+            "m4_navigation_tracker = m4_navigation_tracker.pure_pursuit_controller:main",
         ],
     },
 )
