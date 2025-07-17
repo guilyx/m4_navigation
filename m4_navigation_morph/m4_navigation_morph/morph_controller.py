@@ -18,6 +18,8 @@ class MorphController(Node):
         self.declare_parameter("morph_duration", 5.0)  # Duration in seconds
         self.declare_parameter("morph_angular_velocity", 0.3)  # rad/s
 
+
+        self.get_logger().info(f"Use sim time: {self.get_parameter('use_sim_time').value}")
         self.morph_duration = self.get_parameter("morph_duration").value
         self.morph_angular_velocity = self.get_parameter("morph_angular_velocity").value
         self.fly_tilt_velocity = 1.0
