@@ -34,6 +34,14 @@ namespace m4_bt_plugins
       return;
     }
 
+    std::string ns = node_->get_namespace();
+
+    // Removes leading / for tf transformation
+    if (!ns.empty() && ns.front() == '/') {
+      ns.erase(0, 1); // Removes the first character
+    }
+    goal_pose.header.frame_id = ns + goal_pose.header.frame_id;
+
     // Build action goal
     goal_.path.clear();
     goal_.path.push_back(goal_pose);

@@ -8,7 +8,7 @@ m4_navigation_tracker:
   ros__parameters:
     use_sim_time: false
     lookahead_distance: 2.0
-    max_linear_velocity: 0.5
+    max_linear_velocity: 1.0
     max_angular_velocity: 1.0
     min_lookahead_distance: 1.0
     max_lookahead_distance: 3.0
