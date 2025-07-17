@@ -6,7 +6,7 @@ from rclpy.action import ActionServer
 from rclpy.callback_groups import ReentrantCallbackGroup
 from geometry_msgs.msg import Twist, PoseStamped, TransformStamped
 from m4_msgs.action import TrackPath
-from m4_navigation_waypoints.srv import GpsToPose
+from m4_msgs.srv import GpsToPose
 import math
 import numpy as np
 from tf2_ros import TransformListener, Buffer, TransformBroadcaster

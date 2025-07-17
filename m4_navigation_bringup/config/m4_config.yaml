@@ -14,3 +14,4 @@ m4_navigation_tracker:
     max_lookahead_distance: 3.0
     position_tolerance: 0.2
     orientation_tolerance: 0.13
+    robot_frame: fcu

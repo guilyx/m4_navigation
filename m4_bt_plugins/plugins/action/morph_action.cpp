@@ -33,7 +33,11 @@ namespace m4_bt_plugins
       setStatus(BT::NodeStatus::FAILURE);
     }
 
-    // Look up the mode in our map
+
+
+    // There is no std::string::to_upper in the standard library.
+    // We use std::transform with ::toupper to convert target_mode to uppercase.
+    std::transform(target_mode.begin(), target_mode.end(), target_mode.begin(), ::toupper);
     auto mode_it = mode_map_.find(target_mode);
     if (mode_it == mode_map_.end())
     {

@@ -21,15 +21,23 @@ namespace m4_bt_plugins
   {
     // Get goal pose from input port
     geometry_msgs::msg::PoseStamped goal_pose;
+    bool is_gps;
     if (!getInput("goal", goal_pose))
     {
       RCLCPP_ERROR(logger_, "NavigateToAction: goal port not provided");
       return;
     }
 
+    if (!getInput("is_gps", is_gps))
+    {
+      RCLCPP_ERROR(logger_, "NavigateToAction: is_gps port not provided");
+      return;
+    }
+
     // Build action goal
     goal_.path.clear();
     goal_.path.push_back(goal_pose);
+    goal_.is_gps = is_gps;
 
     RCLCPP_INFO(
         logger_,

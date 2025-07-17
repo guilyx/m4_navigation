@@ -38,6 +38,7 @@ namespace m4_bt_plugins
     {
       return {
           BT::InputPort<geometry_msgs::msg::PoseStamped>("goal", "Goal pose to navigate to"),
+          BT::InputPort<bool>("is_gps", "Whether the goal is in GPS frame"),
       };
     }
 
