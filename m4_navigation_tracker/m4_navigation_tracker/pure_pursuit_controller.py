@@ -477,14 +477,6 @@ class PurePursuitController(Node):
                 qw = transformed_pose.orientation.w
                 theta = math.atan2(2.0 * (qw * qz), 1.0 - 2.0 * (qz * qz))
 
-                # Log relative goal pose
-                # self.get_logger().info(
-                #     f"Relative goal: [x: {transformed_pose.position.x:7.3f}, "
-                #     f"y: {transformed_pose.position.y:7.3f}, "
-                #     f"z: {transformed_pose.position.z:7.3f}, "
-                #     f"θ: {math.degrees(theta):7.2f}°]"
-                # )
-
                 # Check if we've reached the current goal
                 if distance < self.xy_goal_tolerance or self.state == ControllerState.ROTATING:
                     if self.current_goal_idx == len(self.path) - 1:
