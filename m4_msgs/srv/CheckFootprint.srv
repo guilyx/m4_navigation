@@ -1,0 +1,8 @@
+# Request
+geometry_msgs/Polygon footprint  # The footprint to check
+string frame_id                  # The frame the footprint is in
+---
+# Response
+bool in_collision                # Whether the footprint is in collision
+float64 closest_obstacle_dist    # Distance to closest obstacle
+string message                   # Additional information or error message
