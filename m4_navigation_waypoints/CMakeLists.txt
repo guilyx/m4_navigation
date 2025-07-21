@@ -23,6 +23,10 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(m4_msgs REQUIRED)
 
+# Add the path to the CMake module
+set(CMAKE_MODULE_PATH "/usr/share/cmake/geographiclib" ${CMAKE_MODULE_PATH})
+find_package(GeographicLib REQUIRED)
+
 set(exec_name ${PROJECT_NAME})
 set(library_name ${PROJECT_NAME}_lib)
 
@@ -50,6 +54,7 @@ ament_target_dependencies(${library_name} PUBLIC
 
 target_link_libraries(${library_name} PUBLIC
   arrc::arrc
+  Geographic
 )
 
 target_include_directories(${library_name} PUBLIC include)

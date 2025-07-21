@@ -1,5 +1,4 @@
-#ifndef M4_NAVIGATION_WAYPOINTS__WAYPOINT_MANAGER_HPP_
-#define M4_NAVIGATION_WAYPOINTS__WAYPOINT_MANAGER_HPP_
+#pragma once
 
 #include <memory>
 #include <string>
@@ -10,6 +9,8 @@
 #include "m4_msgs/srv/gps_to_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/transform_broadcaster.h"
+#include <GeographicLib/Geocentric.hpp>
+#include <GeographicLib/LocalCartesian.hpp>
 
 namespace m4_navigation_waypoints
 {
@@ -75,8 +76,10 @@ namespace m4_navigation_waypoints
 
     // Transform broadcaster
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    rclcpp::Node::SharedPtr srv_node_;
+
+    GeographicLib::Geocentric earth_;
+    std::unique_ptr<GeographicLib::LocalCartesian> local_cartesian_;
   };
 
 } // namespace m4_navigation_waypoints
-
-#endif // M4_NAVIGATION_WAYPOINTS__WAYPOINT_MANAGER_HPP_

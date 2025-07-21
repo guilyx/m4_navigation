@@ -38,7 +38,6 @@ class PurePursuitController(Node):
         self.declare_parameter("yaw_goal_tolerance", 0.2)
         self.declare_parameter("min_angular_velocity", 0.2)
 
-
         # Control rate in seconds
         self.control_period = 0.1
 
@@ -95,6 +94,7 @@ class PurePursuitController(Node):
         self.state: ControllerState = ControllerState.IDLE
         self.path: list[PoseStamped] | None = None
         self.current_goal_idx: int = 0
+        self.last_status_log_time: float = 0.0  # Add this line
 
         # Create timer for transform monitoring (2 Hz)
         # self.create_timer(0.5, self.monitor_transform_callback)
@@ -139,7 +139,7 @@ class PurePursuitController(Node):
         Returns:
             list[PoseStamped] | None: List of converted PoseStamped messages, or None if conversion fails
         """
-        if not self.gps_to_pose_client.wait_for_service(timeout_sec=1.0):
+        if not self.gps_to_pose_client.wait_for_service(timeout_sec=5.0):
             self.get_logger().error("GPS to pose service not available")
             return None
 
@@ -149,10 +149,13 @@ class PurePursuitController(Node):
             request.latitude = pose.pose.position.x  # Using x as latitude
             request.longitude = pose.pose.position.y  # Using y as longitude
             request.altitude = pose.pose.position.z
-            request.frame_id = pose.header.frame_id
+            request.frame_id = "common_origin"
 
             try:
                 response: GpsToPose.Response = self.gps_to_pose_client.call(request)
+                if not response.success:
+                    self.get_logger().error("Failed to convert GPS point")
+                    return None
                 converted_poses.append(response.pose)
             except Exception as e:
                 self.get_logger().error(f"Failed to convert GPS point: {str(e)}")
@@ -343,9 +346,13 @@ class PurePursuitController(Node):
                 max(-self.max_angular_velocity, 2.0 * angle_diff),
             )
             if abs(cmd_vel.angular.z) < self.min_angular_velocity:
-                cmd_vel.angular.z = math.copysign(self.min_angular_velocity, cmd_vel.angular.z)
+                cmd_vel.angular.z = math.copysign(
+                    self.min_angular_velocity, cmd_vel.angular.z
+                )
 
-            self.get_logger().info(f"Target yaw: {target_yaw}, Angular velocity: {cmd_vel.angular.z}")
+            self.get_logger().info(
+                f"Target yaw: {target_yaw}, Angular velocity: {cmd_vel.angular.z}"
+            )
             return cmd_vel
 
         # Calculate distance to target point
@@ -400,7 +407,7 @@ class PurePursuitController(Node):
 
         # Set commands
         cmd_vel.linear.x = linear_velocity
-        cmd_vel.angular.z = -1*angular_velocity
+        cmd_vel.angular.z = -1 * angular_velocity
 
         # Log the control factors
         self.get_logger().debug(
@@ -424,11 +431,13 @@ class PurePursuitController(Node):
         # Log the received goal
         self.path = goal_handle.request.path
         self.get_logger().info(f"Received path with {len(self.path)} waypoints")
+        self.last_status_log_time = time.time()  # Initialize the timer
 
         # Convert GPS coordinates if needed
         if goal_handle.request.is_gps:
             self.get_logger().info("Converting GPS coordinates to local poses")
             self.path = self.convert_gps_to_poses(self.path)
+            self.get_logger().info(f"Converted path: {self.path}")
             if not self.path:
                 goal_handle.abort()
                 return TrackPath.Result(
@@ -477,10 +486,23 @@ class PurePursuitController(Node):
                 qw = transformed_pose.orientation.w
                 theta = math.atan2(2.0 * (qw * qz), 1.0 - 2.0 * (qz * qz))
 
+                # Throttled logging (every 5 seconds)
+                current_time = time.time()
+                if current_time - self.last_status_log_time >= 5.0:
+                    self.get_logger().info(
+                        f"Status: Goal {self.current_goal_idx + 1}/{len(self.path)}, "
+                        f"Distance: {distance:.2f}m, "
+                        f"Position: [x: {transformed_pose.position.x:.2f}, y: {transformed_pose.position.y:.2f}]"
+                    )
+                    self.last_status_log_time = current_time
+
                 # Check if we've reached the current goal
-                if distance < self.xy_goal_tolerance or self.state == ControllerState.ROTATING:
+                if (
+                    distance < self.xy_goal_tolerance
+                    or self.state == ControllerState.ROTATING
+                ):
                     if self.current_goal_idx == len(self.path) - 1:
-                        if (self.state != ControllerState.ROTATING):
+                        if self.state != ControllerState.ROTATING:
                             self.state = ControllerState.ROTATING
                             self.get_logger().info("Switching to rotation state")
                         # If we're in rotation state and orientation is achieved, we're done

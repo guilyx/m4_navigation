@@ -58,5 +58,15 @@ def generate_launch_description():
                     parsed_config_file,
                 ],
             ),
+            # Waypoints GPS
+            Node(
+                package="m4_navigation_waypoints",
+                executable="m4_navigation_waypoints",
+                name="m4_navigation_waypoints",
+                namespace=uav_name_param,
+                parameters=[
+                    parsed_config_file,
+                ],
+            ),
         ]
     )

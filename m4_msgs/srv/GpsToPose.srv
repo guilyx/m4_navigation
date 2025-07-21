@@ -6,3 +6,4 @@ string frame_id
 ---
 # Response
 geometry_msgs/PoseStamped pose
+bool success
