@@ -11,7 +11,7 @@
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
   <depend>rclcpp</depend>
-  <depend>arrc</depend>
+  <depend>arrc-library</depend>
   <depend>arrc_interfaces</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
