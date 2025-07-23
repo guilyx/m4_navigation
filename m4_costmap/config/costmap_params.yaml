@@ -1,0 +1,34 @@
+costmap:
+  ros__parameters:
+    # General parameters
+    global_frame: "map"
+    robot_base_frame: "base_link"
+    update_frequency: 5.0
+    transform_tolerance: 0.5
+
+    # Map size (in meters, centered on robot)
+    width: 10.0    # 5 meters to each side
+    height: 10.0   # 5 meters front and back
+    resolution: 0.05  # 5cm per cell
+
+    # Enable/disable features
+    use_height_filter: true
+    use_footprint_filter: true
+    use_obstacle_layer: true
+    use_inflation_layer: true
+
+    # Height filter params
+    min_height: 0.1
+    max_height: 2.0
+
+    # Footprint params
+    footprint_radius: 0.5
+    is_circular_robot: true
+
+    # Obstacle layer params
+    obstacle_range: 2.5
+    raytrace_range: 3.0
+
+    # Inflation layer params
+    inflation_radius: 0.55
+    cost_scaling_factor: 10.0

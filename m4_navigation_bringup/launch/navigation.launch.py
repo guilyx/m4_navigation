@@ -68,5 +68,16 @@ def generate_launch_description():
                     parsed_config_file,
                 ],
             ),
+            Node(
+                package="m4_costmap",
+                executable="m4_costmap",
+                name="m4_costmap",
+                parameters=[
+                    parsed_config_file,
+                ],
+                output="screen",
+                namespace=uav_name_param,
+                #prefix="valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes"
+            ),
         ]
     )
