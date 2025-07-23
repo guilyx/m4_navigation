@@ -248,24 +248,9 @@ namespace m4_costmap
       RCLCPP_INFO(get_logger(), "Pointcloud received, starting costmap update");
     }
 
-    // Transform point cloud to global frame
-    sensor_msgs::msg::PointCloud2 transformed_cloud;
-    try {
-      // Look up transform from point cloud frame to global frame
-      geometry_msgs::msg::TransformStamped transform =
-          tf_buffer_->lookupTransform(global_frame_, msg->header.frame_id, msg->header.stamp, tf2::durationFromSec(transform_tolerance_));
-
-      // Transform point cloud
-      tf2::doTransform(*msg, transformed_cloud, transform);
-    } catch (const tf2::TransformException& ex) {
-      RCLCPP_WARN(get_logger(), "Failed to transform point cloud from %s to %s: %s", msg->header.frame_id.c_str(), global_frame_.c_str(),
-                  ex.what());
-      return;
-    }
-
-    // Convert transformed cloud to PCL
+    // Convert to PCL
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromROSMsg(transformed_cloud, *cloud);
+    pcl::fromROSMsg(*msg, *cloud);
 
     // Apply filters in sequence
     if (use_height_filter_ && height_filter_) {
@@ -275,12 +260,11 @@ namespace m4_costmap
       cloud = footprint_filter_->filter(cloud);
     }
 
-    // Publish filtered cloud (in global frame)
+    // Publish filtered cloud
     if (filtered_cloud_pub_->get_subscription_count() > 0) {
       sensor_msgs::msg::PointCloud2 filtered_msg;
       pcl::toROSMsg(*cloud, filtered_msg);
-      filtered_msg.header.stamp = msg->header.stamp;
-      filtered_msg.header.frame_id = global_frame_; // Now in global frame
+      filtered_msg.header = msg->header;
       filtered_cloud_pub_->publish(filtered_msg);
     }
 

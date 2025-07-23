@@ -1,22 +1,23 @@
 #pragma once
 
+#include "geometry_msgs/msg/polygon.hpp"
 #include "m4_costmap/filters/footprint_filter.hpp"
 #include "m4_costmap/filters/height_filter.hpp"
 #include "m4_costmap/layers/inflation_layer.hpp"
 #include "m4_costmap/layers/obstacle_layer.hpp"
+#include "nav_msgs/msg/occupancy_grid.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "std_srvs/srv/trigger.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include <memory>
 #include <mutex>
-#include <nav_msgs/msg/occupancy_grid.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <std_srvs/srv/trigger.hpp>
 #include <string>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 #include <vector>
-#include <visualization_msgs/msg/marker_array.hpp>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
 namespace m4_costmap
 {

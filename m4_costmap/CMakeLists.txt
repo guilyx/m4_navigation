@@ -23,8 +23,6 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
-find_package(backward_ros REQUIRED)
-find_package(tf2_sensor_msgs REQUIRED)
 
 set(exec_name ${PROJECT_NAME})
 set(library_name ${PROJECT_NAME}_lib)
@@ -56,7 +54,6 @@ ament_target_dependencies(${library_name}
   tf2_geometry_msgs
   pcl_ros
   pcl_conversions
-  tf2_sensor_msgs
 )
 
 # Create the node executable
