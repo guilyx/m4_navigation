@@ -432,20 +432,14 @@ namespace m4_costmap
 
   void Costmap::worldToMap(double wx, double wy, unsigned int& mx, unsigned int& my) const
   {
-    // First translate to origin
-    wx -= origin_x_;
-    wy -= origin_y_;
-
-    // Convert to grid coordinates with y-axis inversion
-    mx = static_cast<unsigned int>(wx / resolution_);
-    my = size_y_ - 1 - static_cast<unsigned int>(wy / resolution_); // Invert y-axis
+    mx = static_cast<unsigned int>((wx - origin_x_) / resolution_);
+    my = static_cast<unsigned int>((wy - origin_y_) / resolution_);
   }
 
   void Costmap::mapToWorld(unsigned int mx, unsigned int my, double& wx, double& wy) const
   {
-    // Convert from grid coordinates with y-axis inversion
     wx = origin_x_ + (mx + 0.5) * resolution_;
-    wy = origin_y_ + ((size_y_ - 1 - my) + 0.5) * resolution_; // Invert y-axis
+    wy = origin_y_ + (my + 0.5) * resolution_;
   }
 
   void Costmap::clearCostmapCallback(const std::shared_ptr<std_srvs::srv::Trigger::Request>,

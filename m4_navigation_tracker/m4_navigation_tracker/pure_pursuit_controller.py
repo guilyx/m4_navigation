@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import rclpy
@@ -315,7 +314,7 @@ class PurePursuitController(Node):
         projected_pose.position.y = projected_y
         projected_pose.position.z = pose.position.z
 
-        # Calculate orientation towards the actual target
+            # Calculate orientation towards the actual target
         angle = math.atan2(pose.position.y, pose.position.x)
         projected_pose.orientation.z = math.sin(angle / 2.0)
         projected_pose.orientation.w = math.cos(angle / 2.0)
@@ -341,7 +340,7 @@ class PurePursuitController(Node):
         # If we're in rotation mode, only handle orientation
         if target_yaw is not None and self.state == ControllerState.ROTATING:
             # Use proportional control for final orientation
-            # Current yaw is 0 in robot frame
+        # Current yaw is 0 in robot frame
             angle_diff: float = math.atan2(math.sin(target_yaw), math.cos(target_yaw))
             cmd_vel.angular.z = min(
                 self.max_angular_velocity,
@@ -517,9 +516,9 @@ class PurePursuitController(Node):
                 )
                 transformed_pose = self.transform_pose_to_robot_frame(current_goal)
                 if not transformed_pose:
-                    self.stop_tracking()
-                    goal_handle.abort()
-                    return TrackPath.Result(
+                        self.stop_tracking()
+                        goal_handle.abort()
+                        return TrackPath.Result(
                         success=False, message="Failed to transform current goal"
                     )
 

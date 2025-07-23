@@ -113,20 +113,10 @@ namespace m4_costmap
           continue;
         }
 
-        // Convert to grid coordinates - note the y-axis inversion to match ROS convention
-        // In ROS, x points forward, y points left, while in grid coordinates y increases downward
-        double wx = point.x;
-        double wy = point.y;
+        unsigned int mx = static_cast<unsigned int>((point.x - origin_x_) / resolution_);
+        unsigned int my = static_cast<unsigned int>((point.y - origin_y_) / resolution_);
 
-        // First translate to origin
-        wx -= origin_x_;
-        wy -= origin_y_;
-
-        // Convert to grid coordinates with y-axis inversion
-        unsigned int mx = static_cast<unsigned int>(wx / resolution_);
-        unsigned int my = size_y_ - 1 - static_cast<unsigned int>(wy / resolution_); // Invert y-axis
-
-        // Update bounds using world coordinates
+        // Update bounds using static_cast to handle float to double conversion
         last_min_x_ = std::min(last_min_x_, static_cast<double>(point.x));
         last_min_y_ = std::min(last_min_y_, static_cast<double>(point.y));
         last_max_x_ = std::max(last_max_x_, static_cast<double>(point.x));
