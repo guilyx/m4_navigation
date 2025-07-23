@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 import rclpy
@@ -314,12 +315,12 @@ class PurePursuitController(Node):
         projected_pose.position.y = projected_y
         projected_pose.position.z = pose.position.z
 
-            # Calculate orientation towards the actual target
+        # Calculate orientation towards the actual target
         angle = math.atan2(pose.position.y, pose.position.x)
         projected_pose.orientation.z = math.sin(angle / 2.0)
         projected_pose.orientation.w = math.cos(angle / 2.0)
 
-            return projected_pose
+        return projected_pose
 
     def move(
         self, target_x: float, target_y: float, target_yaw: float | None = None
@@ -340,7 +341,7 @@ class PurePursuitController(Node):
         # If we're in rotation mode, only handle orientation
         if target_yaw is not None and self.state == ControllerState.ROTATING:
             # Use proportional control for final orientation
-        # Current yaw is 0 in robot frame
+            # Current yaw is 0 in robot frame
             angle_diff: float = math.atan2(math.sin(target_yaw), math.cos(target_yaw))
             cmd_vel.angular.z = min(
                 self.max_angular_velocity,
@@ -516,9 +517,9 @@ class PurePursuitController(Node):
                 )
                 transformed_pose = self.transform_pose_to_robot_frame(current_goal)
                 if not transformed_pose:
-                        self.stop_tracking()
-                        goal_handle.abort()
-                        return TrackPath.Result(
+                    self.stop_tracking()
+                    goal_handle.abort()
+                    return TrackPath.Result(
                         success=False, message="Failed to transform current goal"
                     )
 
@@ -700,8 +701,8 @@ class PurePursuitController(Node):
 
 def main(args=None):
     try:
-    rclpy.init(args=args)
-    controller = PurePursuitController()
+        rclpy.init(args=args)
+        controller = PurePursuitController()
         executor = MultiThreadedExecutor(num_threads=4)
         executor.add_node(controller)
 
@@ -709,10 +710,10 @@ def main(args=None):
             executor.spin()
         finally:
             executor.shutdown()
-    controller.destroy_node()
+            controller.destroy_node()
 
     finally:
-    rclpy.shutdown()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
