@@ -149,7 +149,8 @@ class PurePursuitController(Node):
             request.latitude = pose.pose.position.x  # Using x as latitude
             request.longitude = pose.pose.position.y  # Using y as longitude
             request.altitude = pose.pose.position.z
-            request.frame_id = "common_origin"
+            ns = self.get_namespace()
+            request.frame_id = ns + "/gps_origin"
 
             try:
                 response: GpsToPose.Response = self.gps_to_pose_client.call(request)
@@ -363,56 +364,99 @@ class PurePursuitController(Node):
         DISTANCE_SCALE_THRESHOLD = (
             self.lookahead_distance
         )  # Distance at which to start scaling velocity
+        MIN_LINEAR_VELOCITY = (
+            0.3 * self.max_linear_velocity
+        )  # Minimum forward velocity when tracking
+
+        # Angle thresholds for blending between rotation and tracking
+        FULL_ROTATION_THRESHOLD = math.pi * 0.8  # ~145 degrees - full rotation mode
+        START_ROTATION_THRESHOLD = (
+            math.pi * 0.4
+        )  # ~72 degrees - start blending rotation
 
         # Calculate angle to goal (this represents our heading error)
         angle_to_goal = math.atan2(target_y, target_x)
+        abs_angle = abs(angle_to_goal)
 
-        # Scale linear velocity based on both distance and heading error
-        # cos(angle) gives us 1.0 when perfectly aligned, 0.0 when perpendicular
-        heading_factor = abs(
-            math.cos(angle_to_goal)
-        )  # Use absolute value to maintain forward motion
-        distance_factor = min(1.0, distance / DISTANCE_SCALE_THRESHOLD)
+        # Calculate rotation and tracking blend factors
+        if abs_angle >= FULL_ROTATION_THRESHOLD:
+            # Pure rotation mode
+            rotation_factor = 1.0
+            tracking_factor = 0.0
+        elif abs_angle <= START_ROTATION_THRESHOLD:
+            # Pure tracking mode
+            rotation_factor = 0.0
+            tracking_factor = 1.0
+        else:
+            # Blend between rotation and tracking
+            blend_range = FULL_ROTATION_THRESHOLD - START_ROTATION_THRESHOLD
+            blend_factor = (abs_angle - START_ROTATION_THRESHOLD) / blend_range
+            # Smooth the transition using a sine function
+            blend_factor = math.sin(blend_factor * math.pi / 2)
+            rotation_factor = blend_factor
+            tracking_factor = 1.0 - blend_factor
 
-        # Combine factors - this will reduce speed when poorly aligned
-        velocity_scale = distance_factor * (
-            0.3 + 0.7 * heading_factor
-        )  # At least 30% base speed
-
-        # Pure pursuit control law
-        # Calculate curvature (k = 2x/L^2, where x is lateral error and L is lookahead distance)
-        # For robot frame, lateral error is target_y
-        curvature: float = (
-            2.0 * target_y / (distance**2) if distance > DISTANCE_EPSILON else 0.0
+        # Calculate rotation command
+        rotation_direction = 1.0 if angle_to_goal > 0 else -1.0
+        rotation_command = (
+            rotation_direction * self.max_angular_velocity * rotation_factor
         )
 
-        # Calculate target velocities
-        # Forward velocity scales with distance and heading
-        linear_velocity: float = self.max_linear_velocity * velocity_scale
-        # Angular velocity is proportional to curvature and forward velocity
-        angular_velocity: float = linear_velocity * curvature
+        # Calculate tracking command
+        if tracking_factor > 0:
+            # Base velocity calculation
+            base_velocity = self.max_linear_velocity
 
-        # Apply velocity limits while preserving curvature
-        if abs(angular_velocity) > self.max_angular_velocity:
-            scale: float = self.max_angular_velocity / abs(angular_velocity)
-            angular_velocity = math.copysign(
-                self.max_angular_velocity, angular_velocity
+            # Heading factor only affects excess speed above minimum
+            heading_factor = math.cos(
+                angle_to_goal
+            )  # 1.0 when aligned, < 0 when behind
+            heading_factor = max(
+                0.0, heading_factor
+            )  # Don't let heading reduce speed below base
+
+            # Calculate final velocity
+            # Ensure we maintain good forward speed when tracking
+            linear_velocity = (
+                MIN_LINEAR_VELOCITY
+                + (base_velocity - MIN_LINEAR_VELOCITY) * heading_factor
+            ) * tracking_factor
+
+            # Pure pursuit control law
+            curvature: float = (
+                2.0 * target_y / (distance**2) if distance > DISTANCE_EPSILON else 0.0
             )
-            linear_velocity *= scale
 
-        # No need while moving. Only for rotation.
-        # if abs(angular_velocity) < self.min_angular_velocity:
-        #     angular_velocity = math.copysign(self.min_angular_velocity, angular_velocity)
-        #     linear_velocity *= self.min_angular_velocity / abs(angular_velocity)
+            # Calculate angular velocity for tracking
+            tracking_angular = linear_velocity * curvature
 
-        # Set commands
-        cmd_vel.linear.x = linear_velocity
-        cmd_vel.angular.z = -1 * angular_velocity
+            # Apply velocity limits while preserving curvature
+            if abs(tracking_angular) > self.max_angular_velocity:
+                scale: float = self.max_angular_velocity / abs(tracking_angular)
+                tracking_angular = math.copysign(
+                    self.max_angular_velocity, tracking_angular
+                )
+                linear_velocity *= scale
+
+            # Set commands with tracking component
+            cmd_vel.linear.x = linear_velocity
+            cmd_vel.angular.z = -1 * tracking_angular
+        else:
+            # Pure rotation mode
+            cmd_vel.linear.x = 0.0
+            cmd_vel.angular.z = rotation_command
+
+        # Blend final angular velocity if we're in the transition zone
+        if 0.0 < rotation_factor < 1.0:
+            cmd_vel.angular.z = (
+                cmd_vel.angular.z * tracking_factor + rotation_command * rotation_factor
+            )
 
         # Log the control factors
         self.get_logger().debug(
-            f"Control factors: heading_error={math.degrees(angle_to_goal):.1f}°, "
-            f"heading_factor={heading_factor:.2f}, velocity_scale={velocity_scale:.2f}"
+            f"Control: angle={math.degrees(angle_to_goal):.1f}°, "
+            f"rot_factor={rotation_factor:.2f}, track_factor={tracking_factor:.2f}, "
+            f"cmd_vel=[{cmd_vel.linear.x:.2f}, {cmd_vel.angular.z:.2f}]"
         )
 
         return cmd_vel
