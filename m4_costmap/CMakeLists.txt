@@ -23,6 +23,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(tf2_sensor_msgs REQUIRED)
 
 set(exec_name ${PROJECT_NAME})
 set(library_name ${PROJECT_NAME}_lib)
@@ -35,6 +36,7 @@ add_library(${library_name}
   src/filters/footprint_filter.cpp
   src/layers/obstacle_layer.cpp
   src/layers/inflation_layer.cpp
+  src/filters/invert_filter.cpp
 )
 
 target_include_directories(${library_name} PUBLIC
@@ -54,6 +56,7 @@ ament_target_dependencies(${library_name}
   tf2_geometry_msgs
   pcl_ros
   pcl_conversions
+  tf2_sensor_msgs
 )
 
 # Create the node executable

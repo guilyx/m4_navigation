@@ -3,6 +3,7 @@
 #include "geometry_msgs/msg/polygon.hpp"
 #include "m4_costmap/filters/footprint_filter.hpp"
 #include "m4_costmap/filters/height_filter.hpp"
+#include "m4_costmap/filters/invert_filter.hpp"
 #include "m4_costmap/layers/inflation_layer.hpp"
 #include "m4_costmap/layers/obstacle_layer.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
@@ -88,8 +89,10 @@ namespace m4_costmap
     // Filters
     std::unique_ptr<filters::HeightFilter> height_filter_;
     std::unique_ptr<filters::FootprintFilter> footprint_filter_;
+    std::unique_ptr<filters::InvertFilter> invert_filter_;
     bool use_height_filter_;
     bool use_footprint_filter_;
+    bool use_invert_filter_;
 
     // TF
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;

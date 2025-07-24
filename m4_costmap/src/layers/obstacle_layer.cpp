@@ -43,24 +43,29 @@ namespace m4_costmap
       }
 
       // Update master grid with obstacle costs
-      unsigned int size_x = max_i - min_i;
-      unsigned int size_y = max_j - min_j;
+      unsigned int master_size_x = max_i - min_i;
+      unsigned int master_size_y = max_j - min_j;
 
-      for (unsigned int j = 0; j < size_y; ++j) {
+      for (unsigned int j = 0; j < master_size_y; ++j) {
         unsigned int y = min_j + j;
-        for (unsigned int i = 0; i < size_x; ++i) {
+        for (unsigned int i = 0; i < master_size_x; ++i) {
           unsigned int x = min_i + i;
-          unsigned int index = x + y * size_x_;
 
-          if (index >= obstacle_map_.size()) {
+          // Use master grid size for indexing into master grid
+          unsigned int master_index = x + y * master_size_x;
+
+          // Use our grid size for indexing into obstacle map
+          unsigned int obstacle_index = x + y * size_x_;
+
+          if (obstacle_index >= obstacle_map_.size() || master_index >= master_grid.size()) {
             continue;
           }
 
-          unsigned char cost = obstacle_map_[index];
+          unsigned char cost = obstacle_map_[obstacle_index];
           if (cost == LETHAL_OBSTACLE) {
-            master_grid[index] = LETHAL_OBSTACLE;
+            master_grid[master_index] = LETHAL_OBSTACLE;
           } else if (track_unknown_space_ && cost == NO_INFORMATION) {
-            master_grid[index] = NO_INFORMATION;
+            master_grid[master_index] = NO_INFORMATION;
           }
         }
       }
@@ -108,15 +113,23 @@ namespace m4_costmap
         }
 
         // Convert to map coordinates
-        if (point.x < origin_x_ || point.y < origin_y_ || point.x > origin_x_ + size_x_ * resolution_ ||
-            point.y > origin_y_ + size_y_ * resolution_) {
+        // In ROS and in our grid (viewed from above):
+        // - X is forward/up in the map
+        // - Y is left in the map
+        // We keep the same convention as ROS since RViz will display it the same way
+        double map_x = point.x;
+        double map_y = point.y; // No negation needed - keep ROS convention
+
+        if (map_x < origin_x_ || map_y < origin_y_ || map_x > origin_x_ + size_x_ * resolution_ ||
+            map_y > origin_y_ + size_y_ * resolution_) {
           continue;
         }
 
-        unsigned int mx = static_cast<unsigned int>((point.x - origin_x_) / resolution_);
-        unsigned int my = static_cast<unsigned int>((point.y - origin_y_) / resolution_);
+        // Convert to grid cells
+        unsigned int mx = static_cast<unsigned int>((map_x - origin_x_) / resolution_);
+        unsigned int my = static_cast<unsigned int>((map_y - origin_y_) / resolution_);
 
-        // Update bounds using static_cast to handle float to double conversion
+        // Update bounds for TF and visualization
         last_min_x_ = std::min(last_min_x_, static_cast<double>(point.x));
         last_min_y_ = std::min(last_min_y_, static_cast<double>(point.y));
         last_max_x_ = std::max(last_max_x_, static_cast<double>(point.x));

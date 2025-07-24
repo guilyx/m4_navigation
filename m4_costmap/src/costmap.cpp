@@ -28,6 +28,7 @@ namespace m4_costmap
       use_inflation_layer_(true),
       use_height_filter_(true),
       use_footprint_filter_(true),
+      use_invert_filter_(false),
       transform_tolerance_(0.5),
       update_frequency_(5.0),
       pc_received_(false),
@@ -52,6 +53,9 @@ namespace m4_costmap
     }
     if (use_footprint_filter_) {
       footprint_filter_ = std::make_unique<filters::FootprintFilter>();
+    }
+    if (use_invert_filter_) {
+      invert_filter_ = std::make_unique<filters::InvertFilter>();
     }
     if (use_obstacle_layer_) {
       obstacle_layer_ = std::make_unique<layers::ObstacleLayer>();
@@ -125,6 +129,12 @@ namespace m4_costmap
     declare_parameter("inflation_radius", 0.55);
     declare_parameter("cost_scaling_factor", 10.0);
     declare_parameter("pointcloud_topic", "lidar/point_cloud");
+
+    // Invert filter params
+    declare_parameter("use_invert_filter", false);
+    declare_parameter("invert_x", false);
+    declare_parameter("invert_y", false);
+    declare_parameter("invert_z", false);
   }
 
   void Costmap::getParameters()
@@ -145,6 +155,7 @@ namespace m4_costmap
     use_footprint_filter_ = get_parameter("use_footprint_filter").as_bool();
     use_obstacle_layer_ = get_parameter("use_obstacle_layer").as_bool();
     use_inflation_layer_ = get_parameter("use_inflation_layer").as_bool();
+    use_invert_filter_ = get_parameter("use_invert_filter").as_bool();
 
     // Update derived properties
     updateGridProperties();
@@ -175,6 +186,13 @@ namespace m4_costmap
       double cost_scaling_factor = get_parameter("cost_scaling_factor").as_double();
       inflation_layer_->setInflationRadius(inflation_radius);
       inflation_layer_->setCostScalingFactor(cost_scaling_factor);
+    }
+
+    // Configure invert filter
+    if (use_invert_filter_ && invert_filter_) {
+      invert_filter_->setInvertX(get_parameter("invert_x").as_bool());
+      invert_filter_->setInvertY(get_parameter("invert_y").as_bool());
+      invert_filter_->setInvertZ(get_parameter("invert_z").as_bool());
     }
   }
 
@@ -253,6 +271,9 @@ namespace m4_costmap
     pcl::fromROSMsg(*msg, *cloud);
 
     // Apply filters in sequence
+    if (use_invert_filter_ && invert_filter_) {
+      cloud = invert_filter_->filter(cloud);
+    }
     if (use_height_filter_ && height_filter_) {
       cloud = height_filter_->filter(cloud);
     }
@@ -381,7 +402,8 @@ namespace m4_costmap
     // Setup obstacle marker
     obstacle_marker->header.frame_id = global_frame_;
     obstacle_marker->header.stamp = get_clock()->now();
-    obstacle_marker->ns = "obstacles";
+    std::string ns = get_namespace();
+    obstacle_marker->ns = ns + "obstacles";
     obstacle_marker->id = 0;
     obstacle_marker->type = visualization_msgs::msg::Marker::CUBE_LIST;
     obstacle_marker->action = visualization_msgs::msg::Marker::ADD;
@@ -394,7 +416,7 @@ namespace m4_costmap
 
     // Setup inflation marker
     inflation_marker->header = obstacle_marker->header;
-    inflation_marker->ns = "inflation";
+    inflation_marker->ns = ns + "inflation";
     inflation_marker->id = 1;
     inflation_marker->type = visualization_msgs::msg::Marker::CUBE_LIST;
     inflation_marker->action = visualization_msgs::msg::Marker::ADD;

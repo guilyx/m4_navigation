@@ -49,3 +49,8 @@ m4_costmap:
     inflation_radius: 0.55
     cost_scaling_factor: 10.0
     pointcloud_topic: "lidar/point_cloud"
+
+    use_invert_filter: true
+    invert_x: false
+    invert_y: false   # This will flip the Y coordinates
+    invert_z: false

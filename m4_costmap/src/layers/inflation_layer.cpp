@@ -114,7 +114,7 @@ namespace m4_costmap
 
     void InflationLayer::inflateArea(int min_i, int min_j, int max_i, int max_j, std::vector<unsigned char>& master_grid)
     {
-      // Validate bounds
+      // Validate and clamp bounds to grid size
       min_i = std::max(0, min_i);
       min_j = std::max(0, min_j);
       max_i = std::min(static_cast<int>(size_x_), max_i);
@@ -124,6 +124,10 @@ namespace m4_costmap
         return; // Invalid bounds
       }
 
+      // Get master grid dimensions
+      unsigned int master_size_x = max_i - min_i;
+      unsigned int master_size_y = max_j - min_j;
+
       // Clear inflation queue
       std::queue<CellData> empty;
       std::swap(inflation_queue_, empty);
@@ -131,9 +135,9 @@ namespace m4_costmap
       // Find cells to inflate
       for (int j = min_j; j < max_j; ++j) {
         for (int i = min_i; i < max_i; ++i) {
-          int index = i + j * size_x_;
-          if (index >= 0 && static_cast<size_t>(index) < master_grid.size() && master_grid[index] == LETHAL_OBSTACLE) {
-            enqueueCell(index, i, j, i, j);
+          unsigned int master_index = i + j * master_size_x;
+          if (master_index < master_grid.size() && master_grid[master_index] == LETHAL_OBSTACLE) {
+            enqueueCell(master_index, i, j, i, j);
           }
         }
       }
@@ -167,31 +171,43 @@ namespace m4_costmap
         }
 
         // Update cost if higher than existing
-        unsigned int index = cell.index_;
-        if (index >= master_grid.size()) {
+        unsigned int master_index = cell.x_ + cell.y_ * master_size_x;
+        if (master_index >= master_grid.size()) {
           inflation_queue_.pop();
           continue;
         }
 
-        if (master_grid[index] < cost) {
-          master_grid[index] = cost;
+        if (master_grid[master_index] < cost) {
+          master_grid[master_index] = cost;
 
-          // Propagate to neighbors
+          // Propagate to neighbors (using grid coordinates)
           int mx = cell.x_;
           int my = cell.y_;
 
-          // Add bounds checking for neighbor cells
-          if (mx > 0 && (index - 1) < master_grid.size()) {
-            enqueueCell(index - 1, mx - 1, my, cell.src_x_, cell.src_y_);
+          // Check each neighbor with proper bounds checking
+          if (mx > 0) {
+            unsigned int left_index = (mx - 1) + my * master_size_x;
+            if (left_index < master_grid.size()) {
+              enqueueCell(left_index, mx - 1, my, cell.src_x_, cell.src_y_);
+            }
           }
-          if (mx < static_cast<int>(size_x_ - 1) && (index + 1) < master_grid.size()) {
-            enqueueCell(index + 1, mx + 1, my, cell.src_x_, cell.src_y_);
+          if (mx < static_cast<int>(size_x_ - 1)) {
+            unsigned int right_index = (mx + 1) + my * master_size_x;
+            if (right_index < master_grid.size()) {
+              enqueueCell(right_index, mx + 1, my, cell.src_x_, cell.src_y_);
+            }
           }
-          if (my > 0 && (index - size_x_) < master_grid.size()) {
-            enqueueCell(index - size_x_, mx, my - 1, cell.src_x_, cell.src_y_);
+          if (my > 0) {
+            unsigned int up_index = mx + (my - 1) * master_size_x;
+            if (up_index < master_grid.size()) {
+              enqueueCell(up_index, mx, my - 1, cell.src_x_, cell.src_y_);
+            }
           }
-          if (my < static_cast<int>(size_y_ - 1) && (index + size_x_) < master_grid.size()) {
-            enqueueCell(index + size_x_, mx, my + 1, cell.src_x_, cell.src_y_);
+          if (my < static_cast<int>(size_y_ - 1)) {
+            unsigned int down_index = mx + (my + 1) * master_size_x;
+            if (down_index < master_grid.size()) {
+              enqueueCell(down_index, mx, my + 1, cell.src_x_, cell.src_y_);
+            }
           }
         }
 
